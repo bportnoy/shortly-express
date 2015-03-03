@@ -29,14 +29,14 @@ app.use(cookieParser());
 
 app.get('/',
 function(req, res) {
-  sessionCheck(req,res, function(){
+  checkUser(req,res, function(){
     res.render('index');
   });
 });
 
 app.get('/create',
 function(req, res, checked) {
-  sessionCheck(req,res, function(){
+  checkUser(req,res, function(){
     res.render('index');
   });
 });
@@ -53,7 +53,7 @@ function(req, res) {
 
 app.get('/links',
 function(req, res) {
-sessionCheck(req,res, function(){
+checkUser(req,res, function(){
     Links.reset().fetch().then(function(links) {
       res.send(200, links.models);
     });
@@ -159,24 +159,22 @@ app.post('/logout',
     });
 });
 
-var sessionCheck = function(req,res, callback){
+var checkUser = function(req,res, callback){
 var token = req.cookies.token;
 console.log('cookies from session check ' + req.cookies);
 if (!token) res.redirect('/signup');
 db.knex('tokens')
   .where('token',token)
   .then(function(result){
-    if(result.length === 0 || result[0].created_at + 86400000 < Date.now()){
+    if(result.length === 0 || result[0].updated_at + 86400000 < Date.now()){
       res.redirect('/login');
     }
-    else callback();
+    else {
+      db.knex('tokens').where('token',token).update('updated_at', Date.now());
+      callback();
+    }
   });
 };
-//get token from cookie
-//check token against database
-//if token is in database & not expired
-//proceed
-//else redirect to login page
 
 
 

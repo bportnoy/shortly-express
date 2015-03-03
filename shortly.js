@@ -27,9 +27,28 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname + '/public'));
 app.use(cookieParser());
 
+var checkUser = function(req,res, callback){
+var token = req.cookies.token;
+console.log('cookies from session check ' + req.cookies);
+if (!token) res.redirect('/signup');
+db.knex('tokens')
+  .where('token',token)
+  .then(function(result){
+    if(result.length === 0 || result[0].updated_at + 86400000 < Date.now()){
+      res.redirect('/login');
+    }
+    else {
+      db.knex('tokens').where('token',token).update('updated_at', Date.now());
+      callback();
+    }
+  });
+};
+
+var checkUserAsync = Promise.promisify(checkUser);
+
 app.get('/',
 function(req, res) {
-  checkUser(req,res, function(){
+  checkUserAsync(req,res).then(function(){
     res.render('index');
   });
 });
@@ -158,23 +177,6 @@ app.post('/logout',
       res.redirect('/signup');
     });
 });
-
-var checkUser = function(req,res, callback){
-var token = req.cookies.token;
-console.log('cookies from session check ' + req.cookies);
-if (!token) res.redirect('/signup');
-db.knex('tokens')
-  .where('token',token)
-  .then(function(result){
-    if(result.length === 0 || result[0].updated_at + 86400000 < Date.now()){
-      res.redirect('/login');
-    }
-    else {
-      db.knex('tokens').where('token',token).update('updated_at', Date.now());
-      callback();
-    }
-  });
-};
 
 
 
